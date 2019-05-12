@@ -87,13 +87,13 @@ Web3Payments.prototype.getAllBalances = function(address, assets, done) {
 Web3Payments.prototype.tokenSendData = function(address, amount, decimals) {
   let self = this
   amount = toBigNumber(amount)
-  if (!self.options.web3.utils.isAddress(address(address))) { throw new Error('invalid address') }
+  if (!self.options.web3.utils.isAddress(address)) { throw new Error('invalid address') }
   if (amount.lessThan(0)) { throw new Error('invalid amount') }
   if (typeof decimals !== 'number') { throw new Error('invalid decimals') }
   const dataAddress = pad(address.toLowerCase().replace('0x', ''), 64, '0')
   const power = TEN.pow(decimals)
   const dataAmount = pad(amount.times(power).toString(16), 64, '0')
-  return config.tokenFunctionSignatures.transfer + dataAddress + dataAmount
+  return '0xa9059cbb' + dataAddress + dataAmount
 }
 
 Web3Payments.prototype.getDefaultFeeRate = function() {
@@ -146,7 +146,7 @@ Web3Payments.prototype.getChainId = function() {
     .catch(() => 1)
 }
 
-Web3Payments.prototype.getTransaction = function(node, toAddress, amount, network, options = {}) {
+Web3Payments.prototype.getTransaction = function(node, toAddress, amount, options = {}) {
   return Promise.resolve().then(() => {
     let self = this
     const web3 = self.options.web3
@@ -229,7 +229,7 @@ Web3Payments.prototype.sendTransaction = function(node, txData, options = {}) {
 Web3Payments.prototype.transaction = async function(node, coin, to, amount, options = {}, done) {
   let self = this
   try {
-    const txData = await self.getTransaction(node, to, amount, coin.network, options)
+    const txData = await self.getTransaction(node, to, amount, options)
     // const signedTxData = await self.signTransaction(node, txData)
     const txHash = await self.sendTransaction(node, txData, options)
     return done(null, txHash)
