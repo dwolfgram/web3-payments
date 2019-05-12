@@ -160,12 +160,20 @@ Web3Payments.prototype.getPreviousTransactions = async function(address) {
   })
 }
 
+function getChainId() {
+  let self = this
+  const web3 = self.options.web3
+  return web3.eth.getChainId()
+    .then((chainId) => chainId)
+    .catch(() => 1)
+}
+
 Web3Payments.prototype.getTransaction = function(toAddress, amount, network, options = {}) {
   return Promise.resolve().then(() => {
     let self = this
     const web3 = self.options.web3
     const txData = {
-      chainId: config.ethereumChainId,
+      chainId: getChainId(),
       from: this.getAddress(network),
       value: toHex(ZERO),
       data: '',
