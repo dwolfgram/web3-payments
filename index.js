@@ -160,7 +160,7 @@ Web3Payments.prototype.getPreviousTransactions = async function(address) {
   })
 }
 
-function getChainId() {
+Web3Payments.prototype.getChainId = function() {
   let self = this
   const web3 = self.options.web3
   return web3.eth.getChainId()
@@ -173,8 +173,8 @@ Web3Payments.prototype.getTransaction = function(toAddress, amount, network, opt
     let self = this
     const web3 = self.options.web3
     const txData = {
-      chainId: getChainId(),
-      from: this.getAddress(network),
+      chainId: self.getChainId(),
+      from: self.getAddress(network),
       value: toHex(ZERO),
       data: '',
       to: '',
@@ -185,7 +185,7 @@ Web3Payments.prototype.getTransaction = function(toAddress, amount, network, opt
     } else if (options.contractAddress) {
       // Handle ERC20
       txData.to = options.contractAddress,
-      txData.data = this.tokenSendData(toAddress, amount, options.decimals)
+      txData.data = self.tokenSendData(toAddress, amount, options.decimals)
     } else {
       throw new Error(`Unsupported asset ${asset.symbol || asset} provided to EthereumWallet.createTransaction`)
     }
@@ -199,8 +199,8 @@ Web3Payments.prototype.getTransaction = function(toAddress, amount, network, opt
     const customGasPrice = options.gasPrice
     const customGasLimit = options.gasLimit || options.gas
     const opts = [
-      customGasPrice || this.getDefaultFeeRate().then(({ rate }) => rate),
-      customGasLimit || this.estimateGasLimit(txData),
+      customGasPrice || self.getDefaultFeeRate().then(({ rate }) => rate),
+      customGasLimit || self.estimateGasLimit(txData),
       customNonce || web3.eth.getTransactionCount(txData.from),
     ]
     return Promise.all(opts).then(([gasPrice, gasLimit, nonce]) => ({
