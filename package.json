@@ -19,6 +19,7 @@
   "dependencies": {
     "bignumber.js": "^8.1.1",
     "ethereumjs-util": "^6.1.0",
+    "pad-left": "^2.1.0",
     "web3": "^1.0.0-beta.55"
   }
 }

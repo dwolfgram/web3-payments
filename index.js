@@ -1,4 +1,5 @@
 const web3 = require('web3')
+const pad = require('pad-left')
 const toSmallestDenomination = require('./utilites/convert').toSmallestDenomination
 const toMainDenomination = require('./utilites/convert').toMainDenomination
 const toHex = require('./utilites/convert').toHex
@@ -39,6 +40,25 @@ Web3Payments.prototype.getAddress = function(network) {
   address = ethUtil.addHexPrefix(checksumAddress)
   return address
 }
+
+function batchRequest(batch, batchableFn, ...fnArgs) {
+  if (batch) {
+    return new Promise((resolve, reject) => {
+      batch.add(batchableFn.request(...fnArgs, (err, result) => {
+        if (err) { return reject(err) }
+        resolve(result)
+      }))
+    })
+  }
+  return batchableFn(...fnArgs)
+}
+
+function tokenBalanceData(walletAddress) {
+  if (walletAddress.startsWith('0x')) {
+    walletAddress = walletAddress.slice(2)
+  }
+  return config.tokenFunctionSignatures.balanceOf + pad(walletAddress, 64, '0')
+};
 
 Web3Payments.prototype.getBalance = function(address, options, done) {
   let self = this
