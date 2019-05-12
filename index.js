@@ -37,7 +37,8 @@ function Web3Payments (options) {
 
 Web3Payments.prototype.getAddress = function(network) {
   const keyPair = bitcoin.ECPair.makeRandom({ network })
-  let { address } = bitcoin.payments.p2pkh({ pubkey: keyPair.publicKey, network })
+  const publicKey = keyPair.publicKey
+  let { address } = bitcoin.payments.p2pkh({ pubkey: publicKey, network })
   const addr = ethUtil.publicToAddress(publicKey).toString('hex')
   const checksumAddress = ethUtil.toChecksumAddress(addr)
   address = ethUtil.addHexPrefix(checksumAddress)
