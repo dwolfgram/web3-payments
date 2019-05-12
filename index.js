@@ -1,4 +1,5 @@
 const web3 = require('web3')
+const ethUtil = require('ethereumjs-util')
 const pad = require('pad-left')
 const toHex = require('./utilites/convert').toHex
 const toTxFee = require('./utilites/convert').toTxFee
@@ -148,6 +149,17 @@ Web3Payments.prototype.estimateGasLimit = function (txData) {
   }
 }
 
+Web3Payments.prototype.getPreviousTransactions = async function(address) {
+  return Promise.resolve().then(() => {
+    let self = this
+    try {
+      return self.options.web3.getPastLogs({ address })
+    } catch (err) {
+      return `unable to fetch transaction history ${eth}`
+    }
+  })
+}
+
 Web3Payments.prototype.getTransaction = function(toAddress, amount, network, options = {}) {
   return Promise.resolve().then(() => {
     let self = this
@@ -192,11 +204,24 @@ Web3Payments.prototype.getTransaction = function(toAddress, amount, network, opt
   })
 }
 
+Web3Payments.prototype.signTransaction = async function(node, txData) {
+  return Promise.resolve().then(() => {
+    let self = this
+    let privateKey = node.privateKey
+    privateKey = ethUtil.addHexPrefix(privateKey)
+    try {
+      return self.web3.eth.accounts.signTransaction(txData, privateKey)
+    } catch (err) {
+      return `unable to sign transaction: ${err}`
+    }
+  })
+}
+
 Web3Payments.prototype.sendTransaction = function(txData, options = {}) {
   return new Promise((resolve, reject) => {
     const { onTxHash, onReceipt, onConfirmation, onError } = options
     let resolved = false
-    const sendStatus = self.options.web3.eth.sendTransaction(txData)
+    const sendStatus = self.options.web3.eth.sendSignedTransaction(txData.raw)
     sendStatus
       .once('transactionHash', (txHash) => {
         resolve(txHash)
@@ -228,7 +253,8 @@ Web3Payments.prototype.transaction = async function(node, coin, to, amount, opti
   let self = this
   try {
     const txData = await self.getTransaction(to, amount, coin.network, options)
-    const txHash = await self.sendTransaction(txData, options)
+    const signedTxData = await self.signTransaction(node, txData)
+    const txHash = await self.sendTransaction(signedTxData, options)
     return done(null, txHash)
   } catch (err) {
     return done(`error completing transaction: ${err}`)
