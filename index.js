@@ -150,21 +150,20 @@ Web3Payments.prototype.getTransaction = function(node, toAddress, amount, option
   return Promise.resolve().then(() => {
     let self = this
     const web3 = self.options.web3
+    const { asset: { contractAddress, decimals } = {} } = options
     const txData = {
       chainId: 1,
       from: self.getAddress(node),
       value: toHex(ZERO),
       to: '',
     }
-    if (!options.contractAddress) {
+    if (!contractAddress) {
       txData.to = toAddress
-      txData.value = toHex(toSmallestDenomination(amount, options.decimals))
-    } else if (options.contractAddress) {
-      // Handle ERC20
-      txData.to = options.contractAddress,
-      txData.data = self.tokenSendData(toAddress, amount, options.decimals)
+      txData.value = toHex(toSmallestDenomination(amount, decimals))
     } else {
-      throw new Error(`Unsupported asset ${asset.symbol || asset} provided to EthereumWallet.createTransaction`)
+      // Handle ERC20
+      txData.to = contractAddress,
+      txData.data = self.tokenSendData(toAddress, amount, decimals)
     }
     const { previousTx } = options
     let customNonce = options.nonce
