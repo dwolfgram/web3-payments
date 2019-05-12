@@ -1,12 +1,13 @@
 const web3 = require('web3')
 const pad = require('pad-left')
-const toSmallestDenomination = require('./utilites/convert').toSmallestDenomination
-const toMainDenomination = require('./utilites/convert').toMainDenomination
 const toHex = require('./utilites/convert').toHex
 const toTxFee = require('./utilites/convert').toTxFee
 const toBigNumber = require('./utilites/numbers').toBigNumber
 const toNumber = require('./utilites/numbers').toNumber
+const toSmallestDenomination = require('./utilites/numbers').toSmallestDenomination
+const toMainDenomination = require('./utilites/numbers').toMainDenomination
 const ZERO = require('./utilites/numbers').ZERO
+const TEN = require('./utilites/numbers').TEN
 
 const DEFAULT_GAS_PRICE = 21e9 // 21 Gwei
 const DEFAULT_GAS_LIMIT_ETH = toBigNumber(21000)
@@ -27,7 +28,7 @@ function Web3Payments (options) {
       return new Error('Invalid network provided ' + self.options.network)
     }
     console.log('WARN: Using default eth provider. It is highly suggested you set one yourself!', self.options.web3Provider)
-    self.options.web3 = new web3(new web3.default.providers.HttpProvider(self.options.web3Provider))
+    self.options.web3 = new web3(new web3.providers.HttpProvider(self.options.web3Provider))
   }
   return self
 }
@@ -60,9 +61,9 @@ function tokenBalanceData(walletAddress) {
   return config.tokenFunctionSignatures.balanceOf + pad(walletAddress, 64, '0')
 };
 
-Web3Payments.prototype.getBalance = function(address, options, done) {
+Web3Payments.prototype.getBalance = function(address, options = {}, done) {
   let self = this
-  const { web3Batch, asset, contractAddress } = options
+  const { web3Batch = null, asset, contractAddress } = options
   const web3 = self.options.web3
   let request
   if (!contractAddress) {
@@ -111,7 +112,7 @@ Web3Payments.prototype.tokenSendData = function(address, amount, decimals) {
   if (amount.lessThan(0)) { throw new Error('invalid amount') }
   if (typeof decimals !== 'number') { throw new Error('invalid decimals') }
   const dataAddress = pad(address.toLowerCase().replace('0x', ''), 64, '0')
-  const power = TEN.toPower(decimals)
+  const power = TEN.pow(decimals)
   const dataAmount = pad(amount.times(power).toString(16), 64, '0')
   return config.tokenFunctionSignatures.transfer + dataAddress + dataAmount
 }
@@ -147,7 +148,7 @@ Web3Payments.prototype.estimateGasLimit = function (txData) {
   }
 }
 
-Web3Payments.prototype.getTransaction = function(toAddress, amount, network, options) {
+Web3Payments.prototype.getTransaction = function(toAddress, amount, network, options = {}) {
   return Promise.resolve().then(() => {
     let self = this
     const web3 = self.options.web3
@@ -191,7 +192,7 @@ Web3Payments.prototype.getTransaction = function(toAddress, amount, network, opt
   })
 }
 
-Web3Payments.prototype.sendTransaction = function(txData, options) {
+Web3Payments.prototype.sendTransaction = function(txData, options = {}) {
   return new Promise((resolve, reject) => {
     const { onTxHash, onReceipt, onConfirmation, onError } = options
     let resolved = false
@@ -223,7 +224,7 @@ Web3Payments.prototype.sendTransaction = function(txData, options) {
   })
 }
 
-Web3Payments.prototype.transaction = async function(node, coin, to, amount, options, done) {
+Web3Payments.prototype.transaction = async function(node, coin, to, amount, options = {}, done) {
   let self = this
   try {
     const txData = await self.getTransaction(to, amount, coin.network, options)
@@ -234,7 +235,7 @@ Web3Payments.prototype.transaction = async function(node, coin, to, amount, opti
   }
 }
 
-Web3Payments.prototype.getFee = function(node, network, options, done) {
+Web3Payments.prototype.getFee = function(node, network, options = {}, done) {
   let self = this
   if (!options.contractAddress) {
     done(null, toTxFee(MIN_GAS_LIMIT_ETH, DEFAULT_GAS_PRICE))

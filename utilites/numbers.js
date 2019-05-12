@@ -38,19 +38,19 @@ const toNumber = (value = 0) => {
 
 const toMainDenomination = (value, decimals) => {
   value = toBigNumber(value)
-  const power = TEN.toPower(decimals)
+  const power = TEN.pow(decimals)
   return value.div(power)
 }
 
 const toSmallestDenomination = (value, decimals) => {
   value = toBigNumber(value)
-  const power = TEN.toPower(decimals)
+  const power = TEN.pow(decimals)
   return value.times(power)
 }
 
 const toPrecision = (amount, decimals) => {
   amount = toBigNumber(amount)
-  const power = TEN.toPower(decimals)
+  const power = TEN.pow(decimals)
   return amount.times(power).round().div(power)
 }
 
