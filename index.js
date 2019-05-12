@@ -1,5 +1,5 @@
 const web3 = require('web3')
-const bitcoin = require('bitcoinjs-lib')
+const Tx = require('ethereumjs-tx')
 const ethUtil = require('ethereumjs-util')
 const pad = require('pad-left')
 const toHex = require('./utilites/convert').toHex
@@ -213,29 +213,33 @@ Web3Payments.prototype.getTransaction = function(node, toAddress, amount, networ
   })
 }
 
-Web3Payments.prototype.signTransaction = async function(node, txData) {
-  return Promise.resolve().then(() => {
-    let self = this
-    console.log('SIGNING')
-    let privateKey = node.toWIF()
-    console.log(privateKey)
-    console.log(txData)
-    privateKey = ethUtil.addHexPrefix(privateKey)
-    console.log(privateKey)
-    try {
-      return self.options.web3.eth.accounts.signTransaction(txData, privateKey)
-    } catch (err) {
-      return `unable to sign transaction: ${err}`
-    }
-  })
-}
+// Web3Payments.prototype.signTransaction = async function(node, txData) {
+//   return Promise.resolve().then(() => {
+//     let self = this
+//     let privateKey = node.toWIF()
+//     console.log(privateKey)
+//     console.log(txData)
+//     privateKey = ethUtil.addHexPrefix(privateKey)
+//     console.log(privateKey)
+//     try {
+//       return self.options.web3.eth.accounts.signTransaction(txData, privateKey)
+//     } catch (err) {
+//       return `unable to sign transaction: ${err}`
+//     }
+//   })
+// }
 
-Web3Payments.prototype.sendTransaction = function(txData, options = {}) {
+Web3Payments.prototype.sendTransaction = function(node, txData, options = {}) {
   let self = this
   return new Promise((resolve, reject) => {
     const { onTxHash, onReceipt, onConfirmation, onError } = options
+    const tx = new Tx(txData)
+    let privateKey = node.toWIF()
+    privateKey = ethUtil.addHexPrefix(privateKey)
+    tx.sign(privateKey)
+    const serializedTx = tx.serialize()
+    const sendStatus = self.options.web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
     let resolved = false
-    const sendStatus = self.options.web3.eth.sendSignedTransaction(txData.raw)
     sendStatus
       .once('transactionHash', (txHash) => {
         resolve(txHash)
@@ -267,8 +271,8 @@ Web3Payments.prototype.transaction = async function(node, coin, to, amount, opti
   let self = this
   try {
     const txData = await self.getTransaction(node, to, amount, coin.network, options)
-    const signedTxData = await self.signTransaction(node, txData)
-    const txHash = await self.sendTransaction(signedTxData, options)
+    // const signedTxData = await self.signTransaction(node, txData)
+    const txHash = await self.sendTransaction(node, txData, options)
     return done(null, txHash)
   } catch (err) {
     return done(`error completing transaction: ${err}`)
