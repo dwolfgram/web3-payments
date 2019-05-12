@@ -1,6 +1,7 @@
 const web3 = require('web3')
 const Tx = require('ethereumjs-tx')
 const ethUtil = require('ethereumjs-util')
+const getAddressBalances = require('eth-balance-checker/lib/web3').getAddressBalances
 const pad = require('pad-left')
 const toHex = require('./utilites/convert').toHex
 const toTxFee = require('./utilites/convert').toTxFee
@@ -16,6 +17,7 @@ const DEFAULT_GAS_LIMIT_ETH = toBigNumber(21000)
 const DEFAULT_GAS_LIMIT_TOKEN = toBigNumber(100000)
 const MIN_GAS_LIMIT_ETH = DEFAULT_GAS_LIMIT_ETH
 const MIN_GAS_LIMIT_TOKEN = DEFAULT_GAS_LIMIT_TOKEN
+const GET_BALANCES_BATCH_SIZE = 500
 
 function Web3Payments (options) {
   if (!(this instanceof Web3Payments)) return new Web3Payments(options)
@@ -66,46 +68,37 @@ function tokenBalanceData(walletAddress) {
 
 Web3Payments.prototype.getBalance = function(address, options = {}, done) {
   let self = this
-  const { web3Batch = null, asset, contractAddress } = options
+  const { contractAddresses } = options
   const web3 = self.options.web3
-  let request
-  if (!contractAddress) {
-    request = batchRequest(web3Batch, web3.eth.getBalance, address, 'latest')
+  if (!contractAddresses) {
+    return web3.eth.getBalance(address, 'latest')
+      .then((balance) => done(null, toMainDenomination(balance, asset.decimals)))
+      .catch(err => done(`error retrieving balance: ${err}`))
   } else { // Handle ERC20
-    request = batchRequest(web3Batch, web3.eth.call, {
-      to: contractAddress,
-      data: tokenBalanceData(address),
-    }, 'latest')
-  }
-  return request
-    .then((balance) => done ? 
-      done(null, toMainDenomination(balance, asset.decimals)) : 
-      toMainDenomination(balance, asset.decimals))
-    .catch(err => done(`error retrieving balance: ${err}`))
+      return getAddressBalances(web3, address, contractAddresses)
+        .then(balances => {
+          console.log(balances); // { "0x0": "100", "0x456...": "200" }
+          done(null, balances)
+        })
+        .catch(err => done(`error retrieving token balances: ${err}`))
+    } 
 }
 
 Web3Payments.prototype.getAllBalances = function(address, assets, done) {
   let self = this
-  const web3 = self.options.web3
-  const batches = []
-  const balanceRequests = assets.map((asset, i) => {
-    const batchNumber = Math.floor(i / GET_BALANCES_BATCH_SIZE)
-    let batch = batches[batchNumber]
-    if (!batch) {
-      batch = new web3.BatchRequest()
-      batches[batchNumber] = batch
-    }
-    return self.getBalance(address, { web3Batch: batch, asset: asset })
-      .then((balance) => ({ symbol: asset.symbol, balance }))
+  const contractAddresses = assets.map(asset => asset.contractAddress)
+  return self.getBalance(address, { contractAddresses }, (err, balances) => {
+    if (!err) {
+      return Object.keys(balances).reduce(result , contractAddr => {
+        const asset = assets.find(a => a.contactAddress == contractAddr)
+        const balance = balances[contractAddr]
+        return (balance.gt(ZERO) || asset.symbol === 'ETH')
+        ? ({ ...result, [asset.symbol]: balance })
+        : result
+      }, {})
+    } 
+    return done(err)
   })
-  batches.forEach((batch) => batch.execute())
-  return Promise.all(balanceRequests)
-    .then((balances) => done(null, balances.reduce(
-    (result, { symbol, balance }) => (balance.gt(ZERO) || symbol === 'ETH')
-      ? ({ ...result, [symbol]: balance })
-      : result,
-    {})))
-    .catch(err => done(`Unable to get all balances: ${err}`))
 }
 
 Web3Payments.prototype.tokenSendData = function(address, amount, decimals) {
