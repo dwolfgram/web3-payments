@@ -5,7 +5,7 @@ const toBigNumber = require('./numbers').toBigNumber
 const toTxFee = (gasLimit, gasPrice) => {
   gasLimit = toBigNumber(gasLimit)
   gasPrice = toBigNumber(gasPrice)
-  const power = TEN.toPower(18)
+  const power = TEN.pow(18)
   return gasLimit.times(gasPrice).div(power)
 }
 
