@@ -141,7 +141,7 @@ Web3Payments.prototype.getTransaction = function(toAddress, amount, network, opt
     if (!options.contractAddress) {
       txData.to = toAddress
       txData.value = toHex(toSmallestDenomination(amount, options.decimals))
-    } else if (asset.ERC20) {
+    } else if (options.contractAddress) {
       // Handle ERC20
       txData.to = options.contractAddress,
       txData.data = this.tokenSendData(toAddress, amount, options.decimals)
