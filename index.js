@@ -35,13 +35,13 @@ function Web3Payments (options) {
   return self
 }
 
-Web3Payments.prototype.getAddress = function(network) {
-  const keyPair = bitcoin.ECPair.makeRandom({ network })
-  const publicKey = ethUtil.addHexPrefix(keyPair.publicKey)
-  let { address } = bitcoin.payments.p2pkh({ pubkey: publicKey, network })
+Web3Payments.prototype.getAddress = function(node) {
+  const privateKey = node.privateKey
+  let publicKey = ethUtil.privateToPublic(privateKey)
+  publicKey = ethUtil.privateToPublic(privateKey)
   const addr = ethUtil.publicToAddress(publicKey).toString('hex')
   const checksumAddress = ethUtil.toChecksumAddress(addr)
-  address = ethUtil.addHexPrefix(checksumAddress)
+  const address = ethUtil.addHexPrefix(checksumAddress)
   return address
 }
 
@@ -61,7 +61,7 @@ function tokenBalanceData(walletAddress) {
   if (walletAddress.startsWith('0x')) {
     walletAddress = walletAddress.slice(2)
   }
-  return config.tokenFunctionSignatures.balanceOf + pad(walletAddress, 64, '0')
+  return '0x70a08231' + pad(walletAddress, 64, '0')
 };
 
 Web3Payments.prototype.getBalance = function(address, options = {}, done) {
@@ -134,10 +134,7 @@ Web3Payments.prototype.getDefaultFeeRate = function() {
 }
 
 Web3Payments.prototype.estimateGasLimit = function (txData) {
-  const errorFallback = (e) => {
-    console.log('Error calling web3.eth.estimateGas, falling back to fixed limits', e)
-    return Promise.resolve(txData.data ? DEFAULT_GAS_LIMIT_TOKEN : DEFAULT_GAS_LIMIT_ETH)
-  }
+  let self = this
   try {
     return self.options.web3.eth.estimateGas(txData)
       .then(toBigNumber)
@@ -145,7 +142,10 @@ Web3Payments.prototype.estimateGasLimit = function (txData) {
         const minGasLimit = txData.data ? MIN_GAS_LIMIT_TOKEN : MIN_GAS_LIMIT_ETH
         return gasLimit.lt(minGasLimit) ? minGasLimit : gasLimit
       })
-      .catch(errorFallback)
+      .catch((e) => {
+        console.log('Error calling web3.eth.estimateGas, falling back to fixed limits', e)
+        return Promise.resolve(txData.data ? DEFAULT_GAS_LIMIT_TOKEN : DEFAULT_GAS_LIMIT_ETH)
+      })
   } catch (e) {
     return errorFallback(e)
   }
@@ -166,19 +166,18 @@ Web3Payments.prototype.getChainId = function() {
   let self = this
   const web3 = self.options.web3
   return web3.eth.getChainId()
-    .then((chainId) => chainId)
+    .then(chainId => chainId)
     .catch(() => 1)
 }
 
-Web3Payments.prototype.getTransaction = function(toAddress, amount, network, options = {}) {
+Web3Payments.prototype.getTransaction = function(node, toAddress, amount, network, options = {}) {
   return Promise.resolve().then(() => {
     let self = this
     const web3 = self.options.web3
     const txData = {
-      chainId: self.getChainId(),
-      from: self.getAddress(network),
+      chainId: 1,
+      from: self.getAddress(node),
       value: toHex(ZERO),
-      data: '',
       to: '',
     }
     if (!options.contractAddress) {
@@ -217,10 +216,14 @@ Web3Payments.prototype.getTransaction = function(toAddress, amount, network, opt
 Web3Payments.prototype.signTransaction = async function(node, txData) {
   return Promise.resolve().then(() => {
     let self = this
-    let privateKey = node.privateKey
+    console.log('SIGNING')
+    let privateKey = node.toWIF()
+    console.log(privateKey)
+    console.log(txData)
     privateKey = ethUtil.addHexPrefix(privateKey)
+    console.log(privateKey)
     try {
-      return self.web3.eth.accounts.signTransaction(txData, privateKey)
+      return self.options.web3.eth.accounts.signTransaction(txData, privateKey)
     } catch (err) {
       return `unable to sign transaction: ${err}`
     }
@@ -228,6 +231,7 @@ Web3Payments.prototype.signTransaction = async function(node, txData) {
 }
 
 Web3Payments.prototype.sendTransaction = function(txData, options = {}) {
+  let self = this
   return new Promise((resolve, reject) => {
     const { onTxHash, onReceipt, onConfirmation, onError } = options
     let resolved = false
@@ -262,7 +266,7 @@ Web3Payments.prototype.sendTransaction = function(txData, options = {}) {
 Web3Payments.prototype.transaction = async function(node, coin, to, amount, options = {}, done) {
   let self = this
   try {
-    const txData = await self.getTransaction(to, amount, coin.network, options)
+    const txData = await self.getTransaction(node, to, amount, coin.network, options)
     const signedTxData = await self.signTransaction(node, txData)
     const txHash = await self.sendTransaction(signedTxData, options)
     return done(null, txHash)
