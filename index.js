@@ -17,7 +17,6 @@ const DEFAULT_GAS_LIMIT_ETH = toBigNumber(21000)
 const DEFAULT_GAS_LIMIT_TOKEN = toBigNumber(100000)
 const MIN_GAS_LIMIT_ETH = DEFAULT_GAS_LIMIT_ETH
 const MIN_GAS_LIMIT_TOKEN = DEFAULT_GAS_LIMIT_TOKEN
-const GET_BALANCES_BATCH_SIZE = 500
 
 function Web3Payments (options) {
   if (!(this instanceof Web3Payments)) return new Web3Payments(options)
@@ -47,41 +46,24 @@ Web3Payments.prototype.getAddress = function(node) {
   return address
 }
 
-function batchRequest(batch, batchableFn, ...fnArgs) {
-  if (batch) {
-    return new Promise((resolve, reject) => {
-      batch.add(batchableFn.request(...fnArgs, (err, result) => {
-        if (err) { return reject(err) }
-        resolve(result)
-      }))
-    })
-  }
-  return batchableFn(...fnArgs)
-}
-
-function tokenBalanceData(walletAddress) {
-  if (walletAddress.startsWith('0x')) {
-    walletAddress = walletAddress.slice(2)
-  }
-  return '0x70a08231' + pad(walletAddress, 64, '0')
-};
-
 Web3Payments.prototype.getBalance = function(address, options = {}, done) {
   let self = this
-  const { contractAddresses } = options
   const web3 = self.options.web3
-  if (!contractAddresses) {
-    return web3.eth.getBalance(address, 'latest')
-      .then((balance) => done(null, toMainDenomination(balance, asset.decimals)))
-      .catch(err => done(`error retrieving balance: ${err}`))
-  } else { // Handle ERC20
-      return getAddressBalances(web3, address, contractAddresses)
-        .then(balances => {
-          console.log(balances); // { "0x0": "100", "0x456...": "200" }
-          done(null, balances)
-        })
-        .catch(err => done(`error retrieving token balances: ${err}`))
-    } 
+  const { assets = [{ symbol: 'ETH', contractAddress: '0x0', decimals: 18 }] } = options
+  // no need for assets if only want eth balance
+  const contractAddresses = assets.map(asset => asset.contractAddress)
+  return getAddressBalances(web3, address, contractAddresses)
+    .then((balances) => {
+      const mappedBalances = Object.keys(balances).reduce((result, contractAddr) => {
+        const asset = assets.find(a => a.contractAddress == contractAddr)
+        const balance = toBigNumber(balances[contractAddr])
+        return (balance.gt(ZERO) || asset.symbol === 'ETH')
+        ? ({ ...result, [asset.symbol]: toMainDenomination(balance, asset.decimals) })
+        : result
+      }, {})
+      return done(null, mappedBalances)
+    })
+    .catch(err => done(err))
 }
 
 Web3Payments.prototype.getAllBalances = function(address, assets, done) {
@@ -89,13 +71,14 @@ Web3Payments.prototype.getAllBalances = function(address, assets, done) {
   const contractAddresses = assets.map(asset => asset.contractAddress)
   return self.getBalance(address, { contractAddresses }, (err, balances) => {
     if (!err) {
-      return Object.keys(balances).reduce(result , contractAddr => {
-        const asset = assets.find(a => a.contactAddress == contractAddr)
-        const balance = balances[contractAddr]
+      const mappedBalances = Object.keys(balances).reduce((result, contractAddr) => {
+        const asset = assets.find(a => a.contractAddress == contractAddr)
+        const balance = toBigNumber(balances[contractAddr])
         return (balance.gt(ZERO) || asset.symbol === 'ETH')
-        ? ({ ...result, [asset.symbol]: balance })
+        ? ({ ...result, [asset.symbol]: toMainDenomination(balance, asset.decimals) })
         : result
       }, {})
+      return done(null, mappedBalances)
     } 
     return done(err)
   })
