@@ -1,4 +1,5 @@
 const web3 = require('web3')
+const bitcoin = require('bitcoinjs-lib')
 const ethUtil = require('ethereumjs-util')
 const pad = require('pad-left')
 const toHex = require('./utilites/convert').toHex
