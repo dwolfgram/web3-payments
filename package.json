@@ -1,0 +1,24 @@
+{
+  "name": "web3-payments",
+  "version": "1.0.0",
+  "description": "ETH and ERC20 payments library",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dwolfgram/web3-payments.git"
+  },
+  "author": "Dan Wolfgram",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dwolfgram/web3-payments/issues"
+  },
+  "homepage": "https://github.com/dwolfgram/web3-payments#readme",
+  "dependencies": {
+    "bignumber.js": "^8.1.1",
+    "ethereumjs-util": "^6.1.0",
+    "web3": "^1.0.0-beta.55"
+  }
+}
