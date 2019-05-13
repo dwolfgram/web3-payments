@@ -1,4 +1,5 @@
 const web3 = require('web3')
+const axios = require('axios').default
 const Tx = require('ethereumjs-tx')
 const ethUtil = require('ethereumjs-util')
 const getAddressBalances = require('eth-balance-checker/lib/web3').getAddressBalances
@@ -29,6 +30,9 @@ function Web3Payments (options) {
       self.options.web3Provider = 'https://ropsten.infura.io/v3/770c3b3eca7547eabd02f4500f9618f5'
     } else {
       return new Error('Invalid network provided ' + self.options.network)
+    }
+    if(!self.options.explorerUrl) {
+      self.options.explorerUrl = 'http://api.etherscan.io/api'
     }
     console.log('WARN: Using default eth provider. It is highly suggested you set one yourself!', self.options.web3Provider)
     self.options.web3 = new web3(new web3.providers.HttpProvider(self.options.web3Provider))
@@ -127,13 +131,32 @@ Web3Payments.prototype.estimateGasLimit = function (txData) {
   }
 }
 
-Web3Payments.prototype.getPreviousTransactions = async function(address) {
+Web3Payments.prototype.getTxHistory = async function(address, done) {
   return Promise.resolve().then(() => {
     let self = this
     try {
-      return self.options.web3.getPastLogs({ address })
+      const normalHistory = axios.get(self.options.explorerUrl, {
+        params: {
+          module: 'account',
+          action: 'txlist',
+          address: address,
+          startblock: 0,
+          sort: 'asc'
+        }
+      })
+      const tokenHistory = axios.get(self.options.explorerUrl, {
+        params: {
+          module: 'account',
+          action: 'tokentx',
+          address: address,
+          startblock: 0,
+          sort: 'asc'
+        }
+      })
+      const history = normalHistory.data.result.concat(tokenHistory.data.result)
+      return done(null, history)
     } catch (err) {
-      return `unable to fetch transaction history ${eth}`
+      return done(`unable to fetch transaction history ${err}`)
     }
   })
 }

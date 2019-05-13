@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/dwolfgram/web3-payments#readme",
   "dependencies": {
+    "axios": "^0.18.0",
     "bignumber.js": "^8.1.1",
     "eth-balance-checker": "^0.1.1",
     "ethereumjs-tx": "^1.3.7",
