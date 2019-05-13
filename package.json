@@ -24,5 +24,10 @@
     "ethereumjs-util": "^6.1.0",
     "pad-left": "^2.1.0",
     "web3": "1.0.0-beta.34"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.0.1",
+    "eslint": "^5.16.0",
+    "eslint-plugin-import": "^2.17.2"
   }
 }
