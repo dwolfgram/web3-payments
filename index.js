@@ -88,7 +88,7 @@ Web3Payments.prototype.tokenSendData = function(address, amount, decimals) {
   let self = this
   amount = toBigNumber(amount)
   if (!self.options.web3.utils.isAddress(address)) { throw new Error('invalid address') }
-  if (amount.lessThan(0)) { throw new Error('invalid amount') }
+  if (amount.lt(0)) { throw new Error('invalid amount') }
   if (typeof decimals !== 'number') { throw new Error('invalid decimals') }
   const dataAddress = pad(address.toLowerCase().replace('0x', ''), 64, '0')
   const power = TEN.pow(decimals)
@@ -123,7 +123,7 @@ Web3Payments.prototype.estimateGasLimit = function (txData) {
         return Promise.resolve(txData.data ? DEFAULT_GAS_LIMIT_TOKEN : DEFAULT_GAS_LIMIT_ETH)
       })
   } catch (e) {
-    return errorFallback(e)
+    console.log(e)
   }
 }
 
