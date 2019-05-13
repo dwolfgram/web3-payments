@@ -132,33 +132,31 @@ Web3Payments.prototype.estimateGasLimit = function (txData) {
 }
 
 Web3Payments.prototype.getTxHistory = async function(address, done) {
-  return Promise.resolve().then(() => {
-    let self = this
-    try {
-      const normalHistory = axios.get(self.options.explorerUrl, {
-        params: {
-          module: 'account',
-          action: 'txlist',
-          address: address,
-          startblock: 0,
-          sort: 'asc'
-        }
-      })
-      const tokenHistory = axios.get(self.options.explorerUrl, {
-        params: {
-          module: 'account',
-          action: 'tokentx',
-          address: address,
-          startblock: 0,
-          sort: 'asc'
-        }
-      })
-      const history = normalHistory.data.result.concat(tokenHistory.data.result)
-      return done(null, history)
-    } catch (err) {
-      return done(`unable to fetch transaction history ${err}`)
-    }
-  })
+  let self = this
+  try {
+    const normalHistory = await axios.get(self.options.explorerUrl, {
+      params: {
+        module: 'account',
+        action: 'txlist',
+        address: address,
+        startblock: 0,
+        sort: 'asc'
+      }
+    })
+    const tokenHistory = await axios.get(self.options.explorerUrl, {
+      params: {
+        module: 'account',
+        action: 'tokentx',
+        address: address,
+        startblock: 0,
+        sort: 'asc'
+      }
+    })
+    const history = normalHistory.data.result.concat(tokenHistory.data.result)
+    return done(null, history)
+  } catch (err) {
+    return done(`unable to fetch transaction history: ${err}`)
+  }
 }
 
 Web3Payments.prototype.getChainId = function() {
