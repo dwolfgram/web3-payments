@@ -31,7 +31,7 @@ function Web3Payments (options) {
     } else {
       return new Error('Invalid network provided ' + self.options.network)
     }
-    if(!self.options.explorerUrl) {
+    if (!self.options.explorerUrl) {
       self.options.explorerUrl = 'http://api.etherscan.io/api'
     }
     console.log('WARN: Using default eth provider. It is highly suggested you set one yourself!', self.options.web3Provider)
@@ -62,8 +62,8 @@ Web3Payments.prototype.getBalance = function(address, options = {}, done) {
         const asset = assets.find(a => a.contractAddress == contractAddr)
         const balance = toBigNumber(balances[contractAddr])
         return (balance.gt(ZERO) || asset.symbol === 'ETH')
-        ? ({ ...result, [asset.symbol]: toMainDenomination(balance, asset.decimals) })
-        : result
+          ? ({ ...result, [asset.symbol]: toMainDenomination(balance, asset.decimals) })
+          : result
       }, {})
       return done(null, mappedBalances)
     })
@@ -79,8 +79,8 @@ Web3Payments.prototype.getAllBalances = function(address, assets, done) {
         const asset = assets.find(a => a.contractAddress == contractAddr)
         const balance = toBigNumber(balances[contractAddr])
         return (balance.gt(ZERO) || asset.symbol === 'ETH')
-        ? ({ ...result, [asset.symbol]: toMainDenomination(balance, asset.decimals) })
-        : result
+          ? ({ ...result, [asset.symbol]: toMainDenomination(balance, asset.decimals) })
+          : result
       }, {})
       return done(null, mappedBalances)
     } 
@@ -232,7 +232,7 @@ Web3Payments.prototype.sendTransaction = function(node, txData, options = {}) {
       })
     if (typeof onTxHash === 'function') {
       sendStatus.once('transactionHash', onTxHash)
-      }
+    }
     if (typeof onReceipt === 'function') {
       sendStatus.once('receipt', onReceipt)
     }
