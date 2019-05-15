@@ -59,7 +59,7 @@ Web3Payments.prototype.getBalance = function(address, options = {}, done) {
   return getAddressBalances(web3, address, contractAddresses)
     .then((balances) => {
       const mappedBalances = Object.keys(balances).reduce((result, contractAddr) => {
-        const asset = assets.find(a => a.contractAddress == contractAddr)
+        const asset = assets.find(a => a.contractAddress || '0x0' == contractAddr)
         const balance = toBigNumber(balances[contractAddr])
         return (balance.gt(ZERO) || asset.symbol === 'ETH')
           ? ({ ...result, [asset.symbol]: toMainDenomination(balance, asset.decimals) })
@@ -203,7 +203,7 @@ Web3Payments.prototype.sendTransaction = function(node, txData, options = {}) {
     let resolved = false
     sendStatus
       .once('transactionHash', (txHash) => {
-        resolve({ txid: txHash })
+        resolve(txHash)
         resolved = true
       })
       .once('error', (e) => {
