@@ -55,7 +55,7 @@ Web3Payments.prototype.getBalance = function(address, options = {}, done) {
   const web3 = self.options.web3
   const { assets = [{ symbol: 'ETH', contractAddress: '0x0', decimals: 18 }] } = options
   // no need for assets if only want eth balance
-  const contractAddresses = assets.map(asset => asset.contractAddress)
+  const contractAddresses = assets.map(asset => asset.symbol === 'ETH' ? '0x0' : asset.contractAddress)
   return getAddressBalances(web3, address, contractAddresses)
     .then((balances) => {
       const mappedBalances = Object.keys(balances).reduce((result, contractAddr) => {
@@ -68,24 +68,6 @@ Web3Payments.prototype.getBalance = function(address, options = {}, done) {
       return done(null, mappedBalances)
     })
     .catch(err => done(err))
-}
-
-Web3Payments.prototype.getAllBalances = function(address, assets, done) {
-  let self = this
-  const contractAddresses = assets.map(asset => asset.contractAddress)
-  return self.getBalance(address, { contractAddresses }, (err, balances) => {
-    if (!err) {
-      const mappedBalances = Object.keys(balances).reduce((result, contractAddr) => {
-        const asset = assets.find(a => a.contractAddress == contractAddr)
-        const balance = toBigNumber(balances[contractAddr])
-        return (balance.gt(ZERO) || asset.symbol === 'ETH')
-          ? ({ ...result, [asset.symbol]: toMainDenomination(balance, asset.decimals) })
-          : result
-      }, {})
-      return done(null, mappedBalances)
-    } 
-    return done(err)
-  })
 }
 
 Web3Payments.prototype.tokenSendData = function(address, amount, decimals) {
@@ -221,7 +203,7 @@ Web3Payments.prototype.sendTransaction = function(node, txData, options = {}) {
     let resolved = false
     sendStatus
       .once('transactionHash', (txHash) => {
-        resolve(txHash)
+        resolve({ txid: txHash })
         resolved = true
       })
       .once('error', (e) => {
@@ -259,7 +241,6 @@ Web3Payments.prototype.transaction = async function(node, coin, to, amount, opti
 }
 
 Web3Payments.prototype.getFee = function(node, network, options = {}, done) {
-  let self = this
   if (!options.contractAddress) {
     done(null, toTxFee(MIN_GAS_LIMIT_ETH, DEFAULT_GAS_PRICE))
   } else {
