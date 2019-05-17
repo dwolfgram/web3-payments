@@ -7,4 +7,3 @@ dumps
 /.gtm/
 tools/logstash-forwarder.crt
 dump
-node_modules
