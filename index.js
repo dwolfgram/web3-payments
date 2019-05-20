@@ -58,8 +58,9 @@ Web3Payments.prototype.getBalance = function(address, options = {}, done) {
   const contractAddresses = assets.map(asset => asset.symbol === 'ETH' ? '0x0' : asset.contractAddress)
   return getAddressBalances(web3, address, contractAddresses)
     .then((balances) => {
+      console.log(balances)
       const mappedBalances = Object.keys(balances).reduce((result, contractAddr) => {
-        const asset = assets.find(a => a.contractAddress || '0x0' == contractAddr)
+        const asset = assets.find(a => a.contractAddress == contractAddr ? a : a.symbol === 'ETH' && contractAddr == '0x0' ? a : undefined)
         const balance = toBigNumber(balances[contractAddr])
         return (balance.gt(ZERO) || asset.symbol === 'ETH')
           ? ({ ...result, [asset.symbol]: toMainDenomination(balance, asset.decimals) })
